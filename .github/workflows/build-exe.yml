@@ -45,13 +45,13 @@ jobs:
           Copy-Item dist/Smart_Repair_Edition_Ali_Games.exe release/
           Copy-Item assets/ali_games_logo.png release/assets/
           Copy-Item external/wetool.exe release/external/
-          Set-Content release/README.txt @'
-SMART REPAIR EDITION BY ALI GAMES
-
-Smart_Repair_Edition_Ali_Games.exe is the compact main application.
-Original WETOOL is kept external at external\wetool.exe and is not bundled into the main EXE.
-Run the main EXE from this folder so the WETOOL button can find the original executable.
-'@
+          Set-Content release/README.txt @"
+          SMART REPAIR EDITION BY ALI GAMES
+          
+          Smart_Repair_Edition_Ali_Games.exe is the compact main application.
+          Original WETOOL is kept external at external\wetool.exe and is not bundled into the main EXE.
+          Run the main EXE from this folder so the WETOOL button can find the original executable.
+          "@
 
       - name: Upload compact EXE
         uses: actions/upload-artifact@v4
