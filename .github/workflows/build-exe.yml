@@ -26,11 +26,9 @@ jobs:
           python -m py_compile main.py
 
       - name: Build compact EXE
-        run: >-
-          pyinstaller --noconfirm --clean --onefile --windowed
-          --name Smart_Repair_Edition_Ali_Games
-          --noupx
-          main.py
+        shell: powershell
+        run: |
+          pyinstaller --noconfirm --clean --onefile --windowed --name Smart_Repair_Edition_Ali_Games --noupx main.py
 
       - name: Show EXE size
         shell: powershell
@@ -41,17 +39,18 @@ jobs:
       - name: Prepare portable package
         shell: powershell
         run: |
-          New-Item -ItemType Directory -Force -Path release/assets,release/external | Out-Null
-          Copy-Item dist/Smart_Repair_Edition_Ali_Games.exe release/
-          Copy-Item assets/ali_games_logo.png release/assets/
-          Copy-Item external/wetool.exe release/external/
-          Set-Content release/README.txt @"
-          SMART REPAIR EDITION BY ALI GAMES
-          
-          Smart_Repair_Edition_Ali_Games.exe is the compact main application.
-          Original WETOOL is kept external at external\wetool.exe and is not bundled into the main EXE.
-          Run the main EXE from this folder so the WETOOL button can find the original executable.
-          "@
+          New-Item -ItemType Directory -Force -Path release,release/assets,release/external | Out-Null
+          Copy-Item 'dist/Smart_Repair_Edition_Ali_Games.exe' 'release/'
+          Copy-Item 'assets/ali_games_logo.png' 'release/assets/'
+          Copy-Item 'external/wetool.exe' 'release/external/'
+          $readme = @(
+            'SMART REPAIR EDITION BY ALI GAMES'
+            ''
+            'Smart_Repair_Edition_Ali_Games.exe is the compact main application.'
+            'Original WETOOL is kept external at external\wetool.exe and is not bundled into the main EXE.'
+            'Run the main EXE from this folder so the WETOOL button can find the original executable.'
+          )
+          Set-Content -Path 'release/README.txt' -Value $readme -Encoding UTF8
 
       - name: Upload compact EXE
         uses: actions/upload-artifact@v4
