@@ -1,0 +1,65 @@
+name: Build Smart Repair EXE
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install PyInstaller
+        run: python -m pip install --upgrade pip pyinstaller
+
+      - name: Verify source has no bundled WETOOL dependency
+        shell: powershell
+        run: |
+          if (Test-Path 'wetool.exe') { throw 'wetool.exe must remain external.' }
+          if (-not (Test-Path 'external/wetool.exe')) { throw 'external/wetool.exe is missing.' }
+          python -m py_compile main.py
+
+      - name: Build compact EXE
+        shell: powershell
+        run: |
+          pyinstaller --noconfirm --clean --onefile --windowed --name Smart_Repair_Edition_Ali_Games --noupx main.py
+
+      - name: Show EXE size
+        shell: powershell
+        run: |
+          $f = Get-Item 'dist/Smart_Repair_Edition_Ali_Games.exe'
+          Write-Host ('EXE size: {0:N2} MB' -f ($f.Length / 1MB))
+
+      - name: Prepare portable package
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force -Path release,release/assets,release/external | Out-Null
+          Copy-Item 'dist/Smart_Repair_Edition_Ali_Games.exe' 'release/'
+          Copy-Item 'assets/ali_games_logo.png' 'release/assets/'
+          Copy-Item 'external/wetool.exe' 'release/external/'
+          $readme = @(
+            'SMART REPAIR EDITION BY ALI GAMES'
+            ''
+            'Smart_Repair_Edition_Ali_Games.exe is the compact main application.'
+            'Original WETOOL is kept external at external\wetool.exe and is not bundled into the main EXE.'
+            'Run the main EXE from this folder so the WETOOL button can find the original executable.'
+          )
+          Set-Content -Path 'release/README.txt' -Value $readme -Encoding UTF8
+
+      - name: Upload compact EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: Smart-Repair-EXE
+          path: dist/Smart_Repair_Edition_Ali_Games.exe
+
+      - name: Upload portable package
+        uses: actions/upload-artifact@v4
+        with:
+          name: Smart-Repair-Portable
+          path: release/
