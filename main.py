@@ -16,7 +16,7 @@ class App:
         self.root=root; root.title(APP_NAME); root.geometry('1500x900'); root.minsize(1200,720); root.configure(bg=BG)
         self.nor=None; self.syscon=None; self.active=0
         self.build()
-        self.log('SMART REPAIR EDITION BY ALI GAMES siap.')
+        self.log('SMART REPAIR EDITION BY ALI GAMES siap. [BUILD FIX-2]')
         self.log('Mode: satu tahap aktif pada satu waktu.')
         self.log('Original PS4WETOOLS PRO tersedia melalui tombol di bawah.')
 
@@ -54,10 +54,17 @@ class App:
         self.logbox=tk.Text(main,bg='#02060a',fg='#67d9ff',insertbackground='white',font=('Consolas',10),bd=0,padx=12,pady=10,wrap='none')
         self.logbox.pack(fill='both',expand=True)
         self.logbox.tag_config('ok',foreground='#19e875'); self.logbox.tag_config('warn',foreground='#ffcf42'); self.logbox.tag_config('bad',foreground='#ff4c5b'); self.logbox.tag_config('gold',foreground=GOLD)
-        for title in ['INFORMASI NOR','INFORMASI SYSCON','VALIDASI BwE','AKTIVITAS TERAKHIR']:
-            f=tk.LabelFrame(side,text=' '+title+' ',fg=GOLD,bg=PANEL,font=('Segoe UI',10,'bold'),labelanchor='nw'); f.pack(fill='x',pady=4,ipady=8)
-            setattr(self,'card_'+title.split()[1].lower().replace('bwe','bwe'),f)
-        self.nor_info=self.card_informasi; self.sys_info=self.card_syscon; self.bwe_info=self.card_bwe; self.last_info=self.card_aktivitas
+        # Information cards use explicit stable attribute names.
+        cards = {
+            'nor_info': 'INFORMASI NOR',
+            'sys_info': 'INFORMASI SYSCON',
+            'bwe_info': 'VALIDASI BwE',
+            'last_info': 'AKTIVITAS TERAKHIR',
+        }
+        for attr, title in cards.items():
+            f=tk.LabelFrame(side,text=' '+title+' ',fg=GOLD,bg=PANEL,font=('Segoe UI',10,'bold'),labelanchor='nw')
+            f.pack(fill='x',pady=4,ipady=8)
+            setattr(self, attr, f)
         self.set_card(self.nor_info,'Belum ada NOR yang dimuat.')
         self.set_card(self.sys_info,'Belum ada SYSCON yang dimuat.')
         self.set_card(self.bwe_info,'Belum ada hasil validasi.')
