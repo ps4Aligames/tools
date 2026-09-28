@@ -13,7 +13,11 @@ jobs:
           python-version: '3.12'
       - run: python -m pip install --upgrade pip
       - run: pip install -r requirements.txt pyinstaller
-      - run: pyinstaller --noconfirm --clean --onefile --windowed --name "Smart_Repair_Edition_Ali_Games" --add-data "assets;assets" main.py
+      - name: Verify source has no stale card reference
+        shell: pwsh
+        run: |
+          if (Select-String -Path main.py -Pattern 'card_informasi' -Quiet) { throw 'Stale card_informasi reference found in main.py' }
+      - run: pyinstaller --noconfirm --clean --onefile --windowed --clean --name "Smart_Repair_Edition_Ali_Games" --add-data "assets;assets" main.py
       - name: Package
         shell: pwsh
         run: |
