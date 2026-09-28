@@ -132,10 +132,12 @@ class App:
             self.last('SMART READ FULL NOR — OUTPUT BELUM DIPILIH')
             return
         self.log(f'COM {com} masuk sebagai SPIway / Teensy — bukan UART.','ok')
-        self.log('WETOOL: arahkan ke fungsi No. 3 (Read Full NOR).','gold')
-        self.log('Silakan jalankan Read Full pada WETOOL asli. Hasil harus diarahkan ke folder output yang dipilih:','gold')
+        self.log('WETOOL: lanjut ke NO. 3.','gold')
+        self.log('WETOOL No. 3 terbuka. Gunakan READ ALL bawaan WETOOL di area SPIway / Juegos.','gold')
+        self.log('Tidak ada READ ALL buatan Smart Repair. Perintah dan komunikasi hardware tetap milik WETOOL asli.','gold')
+        self.log('Folder output yang dipilih:','gold')
         self.log(f'  OUTPUT: {out}','ok')
-        self.log('Setelah Read selesai: rename non-canonical → simpan → backup → validasi BwE.','gold')
+        self.log('Setelah READ ALL selesai: hasil → rename non-canonical → simpan → backup → validasi BwE.','gold')
         self.last(f'SMART READ FULL NOR — {com} — OUTPUT DIPILIH')
         # Do not automate unknown WETOOL menu/protocol. Launch the untouched WETOOL so No.3 remains native.
         self.launch_wetool(log_message=True)
