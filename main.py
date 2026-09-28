@@ -1,12 +1,12 @@
 import os, sys, subprocess, hashlib, time
 import tkinter as tk
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, messagebox, simpledialog
 from pathlib import Path
 
 APP_NAME = 'SMART REPAIR EDITION BY ALI GAMES'
-BASE = Path(getattr(sys, '_MEIPASS', Path(__file__).resolve().parent))
-WETOOL = BASE / 'wetool.exe'
-LOGO = BASE / 'assets' / 'ali_games_logo.png'
+APP_DIR = Path(sys.executable).resolve().parent if getattr(sys, 'frozen', False) else Path(__file__).resolve().parent
+WETOOL = APP_DIR / 'external' / 'wetool.exe'
+LOGO = APP_DIR / 'assets' / 'ali_games_logo.png'
 
 BG='#05080d'; PANEL='#0b1119'; GOLD='#f6c343'; TEXT='#e8eef7'; MUTED='#8fa1b5'
 BLUE='#1488ff'; GREEN='#18c76a'; ORANGE='#ff9d19'; PURPLE='#9b38ff'; RED='#e52b35'
@@ -16,7 +16,7 @@ class App:
         self.root=root; root.title(APP_NAME); root.geometry('1500x900'); root.minsize(1200,720); root.configure(bg=BG)
         self.nor=None; self.syscon=None; self.active=0
         self.build()
-        self.log('SMART REPAIR EDITION BY ALI GAMES siap. [BUILD FIX-2]')
+        self.log('SMART REPAIR EDITION BY ALI GAMES siap. [SMALL-EXE BUILD]')
         self.log('Mode: satu tahap aktif pada satu waktu.')
         self.log('Original PS4WETOOLS PRO tersedia melalui tombol di bawah.')
 
@@ -25,10 +25,13 @@ class App:
         left=tk.Frame(header,bg=BG); left.pack(side='left')
         if LOGO.exists():
             try:
-                from PIL import Image, ImageTk
-                im=Image.open(LOGO); im.thumbnail((230,85)); self.logo=ImageTk.PhotoImage(im)
+                self.logo = tk.PhotoImage(file=str(LOGO))
+                scale = max(1, (self.logo.width() + 229) // 230)
+                if scale > 1:
+                    self.logo = self.logo.subsample(scale, scale)
                 tk.Label(left,image=self.logo,bg=BG).pack(side='left')
-            except Exception: pass
+            except Exception:
+                pass
         title=tk.Frame(header,bg=BG); title.pack(side='left',padx=20)
         tk.Label(title,text='SMART REPAIR EDITION',fg='#fff2b0',bg=BG,font=('Segoe UI',26,'bold')).pack(anchor='w')
         tk.Label(title,text='BY ALI GAMES',fg=GOLD,bg=BG,font=('Segoe UI',12,'bold')).pack(anchor='w')
@@ -113,17 +116,53 @@ class App:
     def stage3(self):
         if not self.need('nor'): return
         self.log('=== TAHAP 3: SMART PATCH WIRATE NOR ===','gold'); self.log(f'NOR siap diproses: {os.path.basename(self.nor)}','ok'); self.log('Menu native No.4 → Save → No.3 → No.5 tetap milik WETOOL asli.'); self.last('SMART PATCH WIRATE NOR')
+    def output_dir(self):
+        d=Path(__file__).resolve().parent / 'Output'
+        d.mkdir(parents=True, exist_ok=True)
+        return d
+
+    def autosave_copy(self, src, prefix):
+        srcp=Path(src)
+        stamp=time.strftime('%Y%m%d_%H%M%S')
+        dst=self.output_dir() / f'{prefix}_{stamp}{srcp.suffix or ".bin"}'
+        data=srcp.read_bytes()
+        dst.write_bytes(data)
+        md5=hashlib.md5(data).hexdigest().upper()
+        self.log(f'SAVE OTOMATIS BERHASIL: {dst.name}','ok')
+        self.log(f'  Ukuran : {len(data):,} byte | MD5: {md5}','ok')
+        self.log(f'  Lokasi : {dst}','ok')
+        return dst
+
     def stage4(self):
         if not self.need('sys'): return
-        if os.path.getsize(self.syscon)!=512*1024: messagebox.showwarning('SYSCON invalid','File SYSCON harus berukuran tepat 512 KB.'); return
-        self.log('=== TAHAP 4: SMART SYSCONE PATCH ===','gold'); self.log('Load SYSCON 512 KB → WETOOL → No.1 DEBUG ON → No.2','ok'); self.last('SMART SYSCONE PATCH')
+        if os.path.getsize(self.syscon)!=512*1024:
+            messagebox.showwarning('SYSCON invalid','File SYSCON harus berukuran tepat 512 KB.'); return
+        self.log('=== TAHAP 4: SMART SYSCON PATCH ===','gold')
+        self.log('LOAD SYSCON 512 KB','ok')
+        self.log('Load SYSCON ke WETOOL','ok')
+        self.log('NO. 1 → DEBUG ON','ok')
+        self.log('NO. 2 → SNVS AUTO PATCHING','ok')
+        choice=tk.simpledialog.askstring('SNVS AUTO PATCHING','Masukkan nomor patch sesuai daftar yang tampil di WETOOL:')
+        if not choice:
+            self.log('Patch dibatalkan oleh pengguna.','warn'); return
+        self.log(f'Patch nomor {choice} dipilih.','ok')
+        self.log('Fungsi patch native WETOOL belum dieksekusi otomatis pada build ini.','warn')
+        # Simpan backup/input secara otomatis, bukan mengklaim sebagai hasil patch.
+        dst=self.autosave_copy(self.syscon, f'SYSCON_STAGE4_PATCH_{choice}_INPUT')
+        self.set_card(self.sys_info, f'Input      : {os.path.basename(self.syscon)}\nUkuran     : 512 KB\nPatch No.  : {choice}\nAuto-save  : {dst.name}\nStatus     : INPUT BACKUP SAVED')
+        self.last('SMART SYSCON PATCH — AUTO-SAVE BACKUP')
+
     def stage5(self):
         if not self.need('sys'): return
-        if os.path.getsize(self.syscon)!=512*1024: messagebox.showwarning('SYSCON invalid','File SYSCON harus berukuran tepat 512 KB.'); return
+        if os.path.getsize(self.syscon)!=512*1024:
+            messagebox.showwarning('SYSCON invalid','File SYSCON harus berukuran tepat 512 KB.'); return
         self.log('=== TAHAP 5: SMART SYSCON REBUILD ===','gold')
-        for x in ['Load SYSCON 512 KB','Load SYSCON ke WETOOL','No.6','No.4','No.4 lagi','Jalankan Rebuild']:
-            self.log(x+'  ...  UI READY','ok')
-        self.log('Catatan: urutan native WETOOL belum dieksekusi otomatis.','warn'); self.last('SMART SYSCON REBUILD')
+        for x in ['LOAD SYSCON 512 KB','LOAD SYSCON KE WETOOL','NO. 6','NO. 4','NO. 4 LAGI','JALANKAN REBUILD']:
+            self.log(x+' ... UI READY','ok')
+        self.log('Fungsi No.6/No.4 native WETOOL belum dieksekusi otomatis pada build ini.','warn')
+        dst=self.autosave_copy(self.syscon, 'SYSCON_STAGE5_REBUILD_INPUT')
+        self.set_card(self.sys_info, f'Input      : {os.path.basename(self.syscon)}\nUkuran     : 512 KB\nAuto-save  : {dst.name}\nStatus     : REBUILD INPUT BACKUP SAVED')
+        self.last('SMART SYSCON REBUILD — AUTO-SAVE BACKUP')
     def launch_wetool(self):
         if not WETOOL.exists(): messagebox.showerror('WETOOL tidak ditemukan','wetool.exe tidak ada di folder aplikasi.'); return
         try: subprocess.Popen([str(WETOOL)],cwd=str(WETOOL.parent)); self.log('Original wetool.exe dijalankan tanpa modifikasi.','ok')

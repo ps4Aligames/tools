@@ -1,9 +1,12 @@
-SMART REPAIR EDITION BY ALI GAMES - FIX 2
+SMART REPAIR EDITION BY ALI GAMES — SMALL EXE BUILD
 
-This build removes the stale card_informasi reference that caused:
-AttributeError: App object has no attribute card_informasi
+Perubahan:
+- WETOOL ASLI tidak dimasukkan ke dalam Smart_Repair_Edition_Ali_Games.exe.
+- WETOOL tetap berada di external\wetool.exe.
+- UI tidak menggunakan Pillow; logo dibaca langsung oleh Tkinter untuk mengurangi dependency.
+- Build memakai PyInstaller --onefile --windowed.
 
-IMPORTANT: Build this ZIP from a fresh GitHub Actions run. Do not reuse an old artifact.
-The workflow verifies main.py contains no card_informasi reference before PyInstaller.
-
-The current application is a UI/prototype shell. Native WETOOL operations remain in the original wetool.exe.
+Build:
+GitHub Actions -> Build Smart Repair EXE -> Run workflow.
+Artifact Smart-Repair-EXE berisi EXE utama saja.
+Artifact Smart-Repair-Portable berisi EXE + logo + external\wetool.exe.
