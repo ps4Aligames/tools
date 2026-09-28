@@ -1,4 +1,4 @@
-import os, sys, subprocess, hashlib, time
+import os, sys, subprocess, hashlib, time, re
 import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog
 from pathlib import Path
@@ -15,6 +15,8 @@ class App:
     def __init__(self, root):
         self.root=root; root.title(APP_NAME); root.geometry('1500x900'); root.minsize(1200,720); root.configure(bg=BG)
         self.nor=None; self.syscon=None; self.active=0
+        self.output_folder=None
+        self.detected_com=None
         self.build()
         self.log('SMART REPAIR EDITION BY ALI GAMES siap. [SMALL-EXE BUILD]')
         self.log('Mode: satu tahap aktif pada satu waktu.')
@@ -38,7 +40,7 @@ class App:
         tk.Label(title,text='Original PS4WETOOLS PRO',fg='#dce5ee',bg=BG,font=('Segoe UI',10)).pack(anchor='w',pady=(3,0))
         status=tk.Frame(header,bg='#101821',highlightbackground=GOLD,highlightthickness=1); status.pack(side='right',padx=5)
         self.conn=tk.Label(status,text='● Device: Disconnected',fg='#ff5656',bg='#101821',font=('Segoe UI',10,'bold')); self.conn.pack(side='left',padx=15,pady=10)
-        self.uart=tk.Label(status,text='● UART: OFF',fg='#ff5656',bg='#101821',font=('Segoe UI',10,'bold')); self.uart.pack(side='left',padx=15,pady=10)
+        self.uart=tk.Label(status,text='● SPIway/Teensy: CHECK',fg='#ffcf42',bg='#101821',font=('Segoe UI',10,'bold')); self.uart.pack(side='left',padx=15,pady=10)
 
         self.stagebar=tk.Frame(self.root,bg=BG); self.stagebar.pack(fill='x',padx=14,pady=6)
         stages=[('1','SMART READ FULL NOR','Baca & Validasi NOR',BLUE,self.stage1),('2','WRITE NOR FULL','Load NOR → Wirate',GREEN,self.stage2),('3','SMART PATCH WIRATE NOR','Load NOR → Patch → Wirate',ORANGE,self.stage3),('4','SMART SYSCONE PATCH','Load & Patch Syscon',PURPLE,self.stage4),('5','SMART SYSCON REBUILD','Load → No.6 → No.4 → No.4',RED,self.stage5)]
@@ -49,6 +51,14 @@ class App:
         loaders=tk.Frame(self.root,bg=BG); loaders.pack(fill='x',padx=14,pady=6)
         self.nor_btn=self.loader(loaders,'LOAD FILE NOR',self.load_nor); self.sys_btn=self.loader(loaders,'LOAD FILE SYSCON',self.load_syscon)
         tk.Button(loaders,text='▶  GUNAKAN EXE ASLI WETOOL\n    (Tanpa Modifikasi)',command=self.launch_wetool,bg='#151b22',fg='#ffe08a',activebackground='#272f38',font=('Segoe UI',10,'bold'),bd=0,highlightbackground=GOLD,highlightthickness=2).pack(side='right',fill='x',expand=True,padx=4,ipady=7)
+
+        output=tk.Frame(self.root,bg='#0b1119',highlightbackground=GOLD,highlightthickness=1); output.pack(fill='x',padx=14,pady=(0,6))
+        tk.Label(output,text='OUTPUT HASIL NOR',fg=GOLD,bg='#0b1119',font=('Segoe UI',10,'bold')).pack(side='left',padx=(10,6),pady=7)
+        self.output_var=tk.StringVar(value='Pilih folder hasil...')
+        tk.Entry(output,textvariable=self.output_var,bg='#071019',fg='#cfe5ff',insertbackground='white',bd=0,font=('Consolas',9)).pack(side='left',fill='x',expand=True,padx=4,pady=6)
+        tk.Button(output,text='PILIH FOLDER',command=self.choose_output_folder,bg='#151b22',fg='#ffe08a',activebackground='#272f38',font=('Segoe UI',9,'bold'),bd=0,highlightbackground=GOLD,highlightthickness=1).pack(side='left',padx=4,pady=4)
+        tk.Button(output,text='CEK TEENSY / COM',command=self.check_teensy,bg='#151b22',fg='#8fd8ff',activebackground='#272f38',font=('Segoe UI',9,'bold'),bd=0,highlightbackground=BLUE,highlightthickness=1).pack(side='left',padx=4,pady=4)
+        tk.Button(output,text='BUKA FOLDER',command=self.open_output_folder,bg='#151b22',fg='#9ff3bd',activebackground='#272f38',font=('Segoe UI',9,'bold'),bd=0,highlightbackground=GREEN,highlightthickness=1).pack(side='left',padx=(4,8),pady=4)
 
         body=tk.Frame(self.root,bg=BG); body.pack(fill='both',expand=True,padx=14,pady=5)
         main=tk.Frame(body,bg=BG); main.pack(side='left',fill='both',expand=True,padx=(0,6))
@@ -108,23 +118,92 @@ class App:
         if kind=='sys' and not self.syscon: messagebox.showwarning('SYSCON belum dipilih','Load file SYSCON terlebih dahulu.'); return False
         return True
     def stage1(self):
-        self.log('=== TAHAP 1: SMART READ FULL NOR ===','gold'); self.log('Mode demo UI: fungsi native WETOOL belum diubah.')
-        self.last('SMART READ FULL NOR')
+        self.log('=== TAHAP 1: SMART READ FULL NOR ===','gold')
+        self.log('Memeriksa SPIway / Teensy 2.0...',None)
+        com=self.check_teensy(silent=True)
+        if not com:
+            self.log('STOP: COM Teensy/SPIway belum terdeteksi.','bad')
+            self.last('SMART READ FULL NOR — MENUNGGU TEENSY')
+            messagebox.showwarning('Teensy / SPIway tidak terdeteksi','Hubungkan Teensy 2.0/2.0++ dengan firmware SPIway, lalu tekan tombol Tahap 1 lagi.')
+            return
+        out=self.output_dir()
+        if out is None:
+            self.log('STOP: lokasi output belum dipilih.','warn')
+            self.last('SMART READ FULL NOR — OUTPUT BELUM DIPILIH')
+            return
+        self.log(f'COM {com} masuk sebagai SPIway / Teensy — bukan UART.','ok')
+        self.log('WETOOL: arahkan ke fungsi No. 3 (Read Full NOR).','gold')
+        self.log('Silakan jalankan Read Full pada WETOOL asli. Hasil harus diarahkan ke folder output yang dipilih:','gold')
+        self.log(f'  OUTPUT: {out}','ok')
+        self.log('Setelah Read selesai: rename non-canonical → simpan → backup → validasi BwE.','gold')
+        self.last(f'SMART READ FULL NOR — {com} — OUTPUT DIPILIH')
+        # Do not automate unknown WETOOL menu/protocol. Launch the untouched WETOOL so No.3 remains native.
+        self.launch_wetool(log_message=True)
     def stage2(self):
         if not self.need('nor'): return
         self.log('=== TAHAP 2: WRITE NOR FULL ===','gold'); self.log(f'File siap ditulis: {os.path.basename(self.nor)}','ok'); self.log('Write/Verify harus dijalankan oleh WETOOL asli.'); self.last('WRITE NOR FULL')
     def stage3(self):
         if not self.need('nor'): return
         self.log('=== TAHAP 3: SMART PATCH WIRATE NOR ===','gold'); self.log(f'NOR siap diproses: {os.path.basename(self.nor)}','ok'); self.log('Menu native No.4 → Save → No.3 → No.5 tetap milik WETOOL asli.'); self.last('SMART PATCH WIRATE NOR')
+    def choose_output_folder(self):
+        d=filedialog.askdirectory(title='Pilih folder untuk menyimpan hasil NOR')
+        if not d:
+            return
+        self.output_folder=Path(d)
+        self.output_folder.mkdir(parents=True, exist_ok=True)
+        self.output_var.set(str(self.output_folder))
+        self.log(f'Folder output dipilih: {self.output_folder}','ok')
+        self.last('Pilih folder output NOR')
+
     def output_dir(self):
-        d=Path(__file__).resolve().parent / 'Output'
-        d.mkdir(parents=True, exist_ok=True)
-        return d
+        if self.output_folder is None:
+            self.choose_output_folder()
+        if self.output_folder is None:
+            return None
+        self.output_folder.mkdir(parents=True, exist_ok=True)
+        return self.output_folder
+
+    def open_output_folder(self):
+        d=self.output_dir()
+        if not d:
+            return
+        try:
+            os.startfile(str(d))
+        except Exception as e:
+            messagebox.showerror('Gagal membuka folder',str(e))
+
+    def check_teensy(self, silent=False):
+        ports=[]
+        try:
+            if os.name == 'nt':
+                ps = ["Get-CimInstance Win32_SerialPort | Select-Object -ExpandProperty DeviceID"]
+                r=subprocess.run(['powershell','-NoProfile','-Command',ps[0]],capture_output=True,text=True,timeout=5)
+                ports=re.findall(r'COM\d+', r.stdout or '', flags=re.I)
+        except Exception:
+            ports=[]
+        ports=sorted(set(ports), key=lambda x:int(re.search(r'\d+',x).group()))
+        self.detected_com=ports[0] if ports else None
+        if self.detected_com:
+            self.conn.config(text=f'● SPIway: {self.detected_com}',fg=GREEN)
+            self.uart.config(text=f'● Teensy/SPIway: {self.detected_com}',fg=GREEN)
+            self.log(f'SPIway / Teensy terdeteksi pada {self.detected_com}. Ini diperlakukan sebagai koneksi SPI NOR, bukan UART.','ok')
+            self.set_card(self.last_info,f'SPIway / Teensy\nPort : {self.detected_com}\nMode : SPI NOR\nStatus : TERDETEKSI')
+            return self.detected_com
+        self.conn.config(text='● SPIway: Disconnected',fg='#ff5656')
+        self.uart.config(text='● Teensy/SPIway: NOT FOUND',fg='#ff5656')
+        if not silent:
+            self.log('SPIway / Teensy tidak terdeteksi. Periksa USB dan firmware spiway_v0.60_teensy2.0.','bad')
+            messagebox.showwarning('SPIway / Teensy tidak terdeteksi','Tidak ditemukan COM serial. Pastikan Teensy 2.0/2.0++ dengan firmware SPIway terhubung.')
+        return None
 
     def autosave_copy(self, src, prefix):
         srcp=Path(src)
         stamp=time.strftime('%Y%m%d_%H%M%S')
-        dst=self.output_dir() / f'{prefix}_{stamp}{srcp.suffix or ".bin"}'
+        out=self.output_dir()
+        if out is None:
+            self.log('Penyimpanan dibatalkan: folder output belum dipilih.','warn')
+            return None
+        dst=out / f'{prefix}_{stamp}{srcp.suffix or ".bin"}'
         data=srcp.read_bytes()
         dst.write_bytes(data)
         md5=hashlib.md5(data).hexdigest().upper()
@@ -163,7 +242,7 @@ class App:
         dst=self.autosave_copy(self.syscon, 'SYSCON_STAGE5_REBUILD_INPUT')
         self.set_card(self.sys_info, f'Input      : {os.path.basename(self.syscon)}\nUkuran     : 512 KB\nAuto-save  : {dst.name}\nStatus     : REBUILD INPUT BACKUP SAVED')
         self.last('SMART SYSCON REBUILD — AUTO-SAVE BACKUP')
-    def launch_wetool(self):
+    def launch_wetool(self, log_message=False):
         if not WETOOL.exists(): messagebox.showerror('WETOOL tidak ditemukan','wetool.exe tidak ada di folder aplikasi.'); return
         try: subprocess.Popen([str(WETOOL)],cwd=str(WETOOL.parent)); self.log('Original wetool.exe dijalankan tanpa modifikasi.','ok')
         except Exception as e: messagebox.showerror('Gagal menjalankan WETOOL',str(e))

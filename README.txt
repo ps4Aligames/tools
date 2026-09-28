@@ -1,12 +1,8 @@
-SMART REPAIR EDITION BY ALI GAMES — SMALL EXE BUILD
+SMART REPAIR EDITION BY ALI GAMES
 
-Perubahan:
-- WETOOL ASLI tidak dimasukkan ke dalam Smart_Repair_Edition_Ali_Games.exe.
-- WETOOL tetap berada di external\wetool.exe.
-- UI tidak menggunakan Pillow; logo dibaca langsung oleh Tkinter untuk mengurangi dependency.
-- Build memakai PyInstaller --onefile --windowed.
+Stage 1 now provides:
+- SPIway/Teensy COM detection (displayed as SPI NOR, not UART)
+- User-selectable NOR output folder
+- Launch of the untouched external WETOOL for native No.3 Read Full NOR
 
-Build:
-GitHub Actions -> Build Smart Repair EXE -> Run workflow.
-Artifact Smart-Repair-EXE berisi EXE utama saja.
-Artifact Smart-Repair-Portable berisi EXE + logo + external\wetool.exe.
+Important: the Smart Repair app does not fake or replace native WETOOL hardware/protocol operations. The original WETOOL remains external.
